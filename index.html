@@ -360,7 +360,13 @@ function defaultState(){
     logoColor:''
   };
 }
-function todayStr(){return new Date().toISOString().slice(0,10)}
+function todayStr(){
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function save(){localStorage.setItem(LS_KEY, JSON.stringify(state))}
 function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))}catch(e){return null}}
 function uid(){return Math.random().toString(36).slice(2,10)}
@@ -673,6 +679,7 @@ function render(){
       <div>
         <h1>${greeting()}, ${state.name||'Student'} 👋</h1>
         <div class="date">${formatDate(today)}</div>
+        <div class="date" id="liveClock" style="margin-top:4px;font-weight:600"></div>
         <div class="date" style="margin-top:4px;font-style:italic">"${quoteOfDay()}"</div>
       </div>
       <div class="streak">🔥 ${streak} day${streak==1?'':'s'}</div>
@@ -968,7 +975,7 @@ function moveItem(id,val){
   let target;
   const today=todayStr();
   if(val==='tomorrow') target=nextStudyDay(today);
-  else if(val==='nextweek'){ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()+7); target=d.toISOString().slice(0,10);}
+  else if(val==='nextweek'){ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()+7); target=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   else if(val==='custom'){ target=prompt('Enter date (YYYY-MM-DD):', nextStudyDay(today)); if(!target) return; }
   state.movedItems[id]=target;
   save(); render(); toast('Moved');
@@ -1189,6 +1196,41 @@ function importData(e){
   reader.readAsText(file);
 }
 
+/* ============== LIVE TIME / AUTO DAY UPDATE ============== */
+/*
+  The planner normally renders only when an action occurs. These small timers
+  keep the displayed clock current and automatically re-render at midnight,
+  so "today", greeting, quote, schedule, overdue items, streak, and week view
+  switch to the new day without requiring a page reload.
+*/
+let liveTimeInterval=null;
+let liveDayKey=todayStr();
+
+function updateLiveTime(){
+  const now=new Date();
+  const clock=document.getElementById('liveClock');
+  if(clock){
+    clock.textContent = now.toLocaleTimeString([], {
+      hour:'2-digit',
+      minute:'2-digit',
+      second:'2-digit'
+    });
+  }
+
+  const newDayKey=todayStr();
+  if(newDayKey!==liveDayKey){
+    liveDayKey=newDayKey;
+    render();
+  }
+}
+
+function startLiveTime(){
+  if(liveTimeInterval) clearInterval(liveTimeInterval);
+  liveDayKey=todayStr();
+  updateLiveTime();
+  liveTimeInterval=setInterval(updateLiveTime,1000);
+}
+
 /* Init */
 document.body.setAttribute('data-theme', state.theme||'lilac');
 document.body.setAttribute('data-dark', state.dark? '1':'0');
@@ -1201,6 +1243,7 @@ document.getElementById('darkToggle').textContent = state.dark? '☀':'🌙';
 applyBackground();
 applyLogoColorToDom();
 render();
+startLiveTime();
 </script>
 </body>
 </html>
