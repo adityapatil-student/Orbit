@@ -188,12 +188,12 @@ h3{margin:0;font-size:16px}
 <div class="shell">
   <div class="sidebar">
     <div class="brand"><div class="orb"></div>Orbit</div>
-    <button class="nav-item active">📊 Dashboard</button>
-    <button class="nav-item" onclick="openSubjectBuilder()">📚 Subjects</button>
-    <button class="nav-item" onclick="openModal('testModal')">📝 Tests</button>
-    <button class="nav-item" onclick="openModal('breakModal')">🌤 Breaks</button>
-    <button class="nav-item" onclick="openDaysOff()">📅 Week plan</button>
-    <button class="nav-item" onclick="openSettingsPrefillAndOpen()">⚙ Settings</button>
+    <button class="nav-item active" id="nav-dashboard" onclick="setView('dashboard')">📊 Dashboard</button>
+    <button class="nav-item" id="nav-subjects" onclick="setView('subjects')">📚 Subjects</button>
+    <button class="nav-item" id="nav-tests" onclick="setView('tests')">📝 Tests</button>
+    <button class="nav-item" id="nav-breaks" onclick="setView('breaks')">🌤 Breaks</button>
+    <button class="nav-item" id="nav-week" onclick="setView('week')">📅 Week plan</button>
+    <button class="nav-item" id="nav-settings" onclick="openSettingsPrefillAndOpen()">⚙ Settings</button>
     <div class="sidebar-foot">
       <b>Keep your streak</b>
       <span style="font-size:12px;opacity:.75">Finish today's plan to keep the fire going.</span>
@@ -480,7 +480,154 @@ function computeStreak(){
   return streak;
 }
 
+/* ============== DEDICATED PAGES ============== */
+function pageHeader(title,btnLabel,btnFn){
+  return `<div class="row" style="justify-content:space-between;margin-bottom:16px">
+    <h1 style="font-size:22px;margin:0">${title}</h1>
+    ${btnLabel? `<button class="btn" onclick="${btnFn}">${btnLabel}</button>`:''}
+  </div>`;
+}
+
+function renderSubjectsPage(){
+  const app=document.getElementById('app');
+  app.innerHTML = pageHeader('Subjects','+ Add subject','openSubjectBuilder()') + `
+  <div class="glass card">
+    ${!state.subjects.length? `<div class="empty">No subjects yet. Add one to get started.</div>` :
+    state.subjects.map((sub,sIdx)=>{
+      const c=subjectColor(sub.name);
+      return `<div class="chapter-block" style="border-left:4px solid ${c}">
+        <div class="chapter-head">
+          <input value="${sub.name}" onchange="editSubjectName(${sIdx},this.value)" style="font-weight:700;font-size:15px">
+          <button class="icon-del" onclick="deleteSubject(${sIdx})" title="Delete subject">✕</button>
+        </div>
+        ${sub.chapters.map((ch,cIdx)=>`
+          <div style="margin:10px 0;padding:10px;border-radius:12px;background:var(--panel)">
+            <div class="lecture-row">
+              <input class="lec-title" value="${ch.name}" onchange="editChapterName(${sIdx},${cIdx},this.value)" style="font-weight:600">
+              <button class="del" onclick="deleteChapter(${sIdx},${cIdx})">✕</button>
+            </div>
+            ${ch.lectures.map((l,lIdx)=>{
+              const hh=Math.floor(l.minutes/60), mm=l.minutes%60;
+              return `<div class="lecture-row" style="margin-left:14px">
+                <input class="lec-title" value="${l.name}" onchange="editLectureField(${sIdx},${cIdx},${lIdx},'name',this.value)">
+                <input class="lec-time" type="number" min="0" value="${hh}" onchange="editLectureField(${sIdx},${cIdx},${lIdx},'hh',this.value)">
+                <span class="colon">h</span>
+                <input class="lec-time" type="number" min="0" max="59" value="${mm}" onchange="editLectureField(${sIdx},${cIdx},${lIdx},'mm',this.value)">
+                <span class="colon">m</span>
+                <span class="pill" style="padding:3px 8px;font-size:11px">${l.done?'Done':'Pending'}</span>
+                <button class="del" onclick="deleteLecture(${sIdx},${cIdx},${lIdx})">✕</button>
+              </div>`;
+            }).join('')}
+            <button type="button" class="add-lec-btn" onclick="addLectureToChapter(${sIdx},${cIdx})">+ Add lecture</button>
+          </div>`).join('')}
+        <button type="button" class="add-lec-btn" onclick="addChapterToSubject(${sIdx})">+ Add chapter</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+function editSubjectName(sIdx,val){ state.subjects[sIdx].name=val.trim()||state.subjects[sIdx].name; save(); renderSubjectsPage(); }
+function deleteSubject(sIdx){ if(!confirm('Delete this subject and all its chapters?'))return; state.subjects.splice(sIdx,1); save(); renderSubjectsPage(); }
+function editChapterName(sIdx,cIdx,val){ state.subjects[sIdx].chapters[cIdx].name=val.trim()||state.subjects[sIdx].chapters[cIdx].name; save(); renderSubjectsPage(); }
+function deleteChapter(sIdx,cIdx){ if(!confirm('Delete this chapter and its lectures?'))return; state.subjects[sIdx].chapters.splice(cIdx,1); save(); renderSubjectsPage(); }
+function editLectureField(sIdx,cIdx,lIdx,field,val){
+  const l=state.subjects[sIdx].chapters[cIdx].lectures[lIdx];
+  if(field==='name'){ l.name=val.trim()||l.name; }
+  else{
+    const hh=field==='hh'? (+val||0) : Math.floor(l.minutes/60);
+    const mm=field==='mm'? (+val||0) : l.minutes%60;
+    l.minutes=hh*60+mm;
+  }
+  save(); renderSubjectsPage();
+}
+function deleteLecture(sIdx,cIdx,lIdx){ state.subjects[sIdx].chapters[cIdx].lectures.splice(lIdx,1); save(); renderSubjectsPage(); }
+function addLectureToChapter(sIdx,cIdx){
+  const ch=state.subjects[sIdx].chapters[cIdx];
+  ch.lectures.push({id:uid(),name:`Lecture ${ch.lectures.length+1}`,minutes:45,done:false});
+  save(); renderSubjectsPage();
+}
+function addChapterToSubject(sIdx){
+  state.subjects[sIdx].chapters.push({id:uid(),name:'New chapter',lectures:[{id:uid(),name:'Lecture 1',minutes:45,done:false}]});
+  save(); renderSubjectsPage();
+}
+
+function renderTestsPage(){
+  const app=document.getElementById('app');
+  app.innerHTML = pageHeader('Tests','+ Add test',"openModal('testModal')") + `
+  <div class="glass card">
+    ${!state.tests.length? `<div class="empty">No tests yet.</div>` :
+    state.tests.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
+      const idx=state.tests.findIndex(x=>x.id===t.id);
+      return `<div class="chapter-block">
+        <div class="field-row">
+          <div class="field"><label>Name</label><input value="${t.name}" onchange="editTestField(${idx},'name',this.value)"></div>
+          <div class="field"><label>Date</label><input type="date" value="${t.date}" onchange="editTestField(${idx},'date',this.value)"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Duration (min)</label><input type="number" value="${t.duration}" onchange="editTestField(${idx},'duration',this.value)"></div>
+          <div class="field"><label>Questions</label><input type="number" value="${t.questions}" onchange="editTestField(${idx},'questions',this.value)"></div>
+          <div class="field"><label>Marks</label><input type="number" value="${t.marks}" onchange="editTestField(${idx},'marks',this.value)"></div>
+        </div>
+        <div class="row" style="justify-content:space-between">
+          <span class="pill">${t.done?'Completed':'Pending'}</span>
+          <div class="row">
+            <button class="btn ghost sm" onclick="toggleTestDone('${t.id}');renderTestsPage()">${t.done?'Mark pending':'Mark done'}</button>
+            <button class="btn danger sm" onclick="deleteTest('${t.id}');renderTestsPage()">Delete</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+function editTestField(idx,field,val){
+  const t=state.tests[idx]; if(!t) return;
+  if(field==='name') t.name=val.trim()||t.name;
+  else if(field==='date') t.date=val;
+  else t[field]=+val||0;
+  save(); renderTestsPage();
+}
+
+function renderBreaksPage(){
+  const app=document.getElementById('app');
+  app.innerHTML = pageHeader('Breaks','+ Add break',"openModal('breakModal')") + `
+  <div class="glass card">
+    ${!state.breaks.length? `<div class="empty">No breaks scheduled.</div>` :
+    state.breaks.map((b,idx)=>`
+      <div class="chapter-block">
+        <div class="field-row">
+          <div class="field"><label>From</label><input type="date" value="${b.from}" onchange="editBreak(${idx},'from',this.value)"></div>
+          <div class="field"><label>To</label><input type="date" value="${b.to}" onchange="editBreak(${idx},'to',this.value)"></div>
+        </div>
+        <button class="btn danger sm" onclick="deleteBreak(${idx})">Delete</button>
+      </div>`).join('')}
+  </div>`;
+}
+function editBreak(idx,field,val){ state.breaks[idx][field]=val; save(); renderBreaksPage(); }
+function deleteBreak(idx){ state.breaks.splice(idx,1); save(); renderBreaksPage(); }
+
+function renderWeekPage(){
+  const app=document.getElementById('app');
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  app.innerHTML = pageHeader('Week plan','','') + `
+  <div class="glass card">
+    ${days.map(d=>`
+      <div class="field">
+        <label>${d}</label>
+        <div class="chip-toggle" id="wchip-${d}">
+          ${['Study','Day off','My own work'].map(opt=>`<button type="button" class="chip ${state.daysOff[d]===opt?'active':''}" onclick="setWeekDay('${d}','${opt}')">${opt}</button>`).join('')}
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+function setWeekDay(d,opt){
+  state.daysOff[d]=opt; save();
+  document.querySelectorAll(`#wchip-${d} .chip`).forEach(b=>b.classList.toggle('active', b.textContent===opt));
+  toast('Saved');
+}
+
 /* ============== RENDER ============== */
+let currentView='dashboard';
+function setView(v){ currentView=v; document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); const el=document.getElementById('nav-'+v); if(el) el.classList.add('active'); render(); }
+
 function render(){
   document.getElementById('uname-display').textContent = state.name? state.name : 'Orbit';
   document.getElementById('goalPill').textContent = state.goal? state.goal : 'Set goal';
@@ -490,6 +637,10 @@ function render(){
   document.getElementById('avatarInit').style.backgroundPosition='center';
 
   const app=document.getElementById('app');
+  if(state.onboarded && currentView==='subjects'){ renderSubjectsPage(); return; }
+  if(state.onboarded && currentView==='tests'){ renderTestsPage(); return; }
+  if(state.onboarded && currentView==='breaks'){ renderBreaksPage(); return; }
+  if(state.onboarded && currentView==='week'){ renderWeekPage(); return; }
   if(!state.onboarded){
     renderOnboarding(); return;
   }
