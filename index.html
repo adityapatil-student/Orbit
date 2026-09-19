@@ -137,11 +137,50 @@ h3{margin:0;font-size:16px}
 .subj-fill{height:100%;border-radius:5px}
 
 /* week strip */
+
+/* Side month calendar */
+.month-calendar{padding:18px}
+.month-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.month-cal-title{font-size:15px;font-weight:700;color:var(--ink)}
+.month-cal-nav{display:flex;gap:4px}
+.month-cal-nav button,.month-cal-today{
+  border:1px solid var(--border);background:var(--surface);color:var(--ink);
+  border-radius:9px;cursor:pointer;font:inherit;
+}
+.month-cal-nav button{width:30px;height:30px;font-size:18px;line-height:1}
+.month-cal-nav button:hover,.month-cal-today:hover{background:var(--panel);border-color:var(--accent)}
+.month-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.month-cal-dow{
+  text-align:center;font-size:10px;font-weight:700;color:var(--txt-dim);
+  padding:3px 0 7px;letter-spacing:.02em
+}
+.month-cal-day{
+  width:100%;aspect-ratio:1;border:0;border-radius:50%;
+  background:transparent;color:var(--ink);font:inherit;font-size:12px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.month-cal-day:hover{background:var(--panel)}
+.month-cal-day.muted{color:var(--txt-dim);opacity:.45}
+.month-cal-day.has-plan{font-weight:700}
+.month-cal-day.selected{background:var(--accent);color:#fff}
+.month-cal-day.today:not(.selected){box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.month-cal-day.off{opacity:.55}
+.month-cal-footer{display:flex;justify-content:flex-end;margin-top:10px}
+.month-cal-today{padding:5px 9px;font-size:11px}
+
 .week-strip{display:flex;flex-direction:column;gap:6px}
-.week-day{display:flex;justify-content:space-between;font-size:12.5px;padding:9px 12px;border-radius:12px;background:var(--surface)}
-.week-day.today{background:#111;color:#fff}
-.week-day .lbl{color:inherit;font-weight:700;width:34px;opacity:.6}
-.week-day.off{opacity:.5}
+.week-day{
+  display:flex;justify-content:space-between;align-items:center;width:100%;
+  font:inherit;font-size:12.5px;padding:9px 12px;border-radius:12px;
+  background:var(--surface);color:var(--ink);border:1px solid var(--border);
+  text-align:left;cursor:pointer;transition:background .18s,border-color .18s,transform .18s;
+}
+.week-day:hover{background:var(--panel);border-color:var(--accent);transform:translateY(-1px)}
+.week-day.today{background:var(--accent);color:#fff;border-color:var(--accent)}
+.week-day.selected{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)}
+.week-day .lbl{color:inherit;font-weight:700;width:34px;opacity:.7}
+.week-day.off{background:var(--surface);color:var(--txt-dim)}
+.week-day.off.today{background:var(--accent);color:#fff}
 
 /* modal */
 .overlay{position:fixed;inset:0;background:rgba(20,20,20,0.4);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
@@ -477,7 +516,7 @@ function badgeRow(streak){
 function computeStreak(){
   let streak=0; let d=new Date();
   for(let i=0;i<400;i++){
-    const ds=d.toISOString().slice(0,10);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if(state.doneDates[ds]) streak++;
     else if(ds===todayStr()) { /* today not done yet, don't break streak count of past */ }
     else break;
@@ -632,6 +671,8 @@ function setWeekDay(d,opt){
 
 /* ============== RENDER ============== */
 let currentView='dashboard';
+let selectedPlanDate=null;
+let calendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 function setView(v){ currentView=v; document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); const el=document.getElementById('nav-'+v); if(el) el.classList.add('active'); render(); }
 
 function render(){
@@ -662,23 +703,25 @@ function render(){
   }
 
   const today=todayStr();
+  if(!selectedPlanDate) selectedPlanDate=today;
+  const planDate=selectedPlanDate;
   const schedule=computeSchedule();
   const testsMap=testsByDate();
-  const todayItems=(schedule[today]||[]);
-  const todayTests=(testsMap[today]||[]);
+  const planItems=(schedule[planDate]||[]);
+  const planTests=(testsMap[planDate]||[]);
   const overdueDates=Object.keys(schedule).filter(d=>d<today);
   const overdueItems=[]; overdueDates.forEach(d=>schedule[d].forEach(i=>overdueItems.push({...i,origDate:d})));
 
   const prog=overallProgress();
   const streak=computeStreak();
-  const allDoneToday = todayItems.every(i=>i.done) && todayTests.every(t=>t.done) && (todayItems.length+todayTests.length>0);
+  const allDoneToday = (schedule[today]||[]).every(i=>i.done) && (testsMap[today]||[]).every(t=>t.done) && ((schedule[today]||[]).length+(testsMap[today]||[]).length>0);
 
   app.innerHTML = `
   <div class="glass hero">
     <div class="hero-top">
       <div>
         <h1>${greeting()}, ${state.name||'Student'} 👋</h1>
-        <div class="date">${formatDate(today)}</div>
+        <div class="date">${formatDate(planDate)}${planDate!==today?' <span style="font-size:11px;opacity:.7">(selected)</span>':''}</div>
         <div class="date" id="liveClock" style="margin-top:4px;font-weight:600"></div>
         <div class="date" style="margin-top:4px;font-style:italic">"${quoteOfDay()}"</div>
       </div>
@@ -698,7 +741,8 @@ function render(){
     <button class="btn ghost sm" onclick="openModal('testModal')">+ Test</button>
     <button class="btn ghost sm" onclick="openModal('breakModal')">Take a break</button>
     <button class="btn ghost sm" onclick="openDaysOff()">Days off</button>
-    <button class="btn ghost sm" ${allDoneToday?'disabled':''} onclick="markAllDoneToday()">✓ All done for today</button>
+    ${planDate!==today?`<button class="btn ghost sm" onclick="showDatePlan('${today}')">↩ Today</button>`:''}
+    <button class="btn sm" ${allDoneToday?'disabled':''} onclick="markAllDoneToday()">✓ All done for today</button>
   </div>
 
   <div class="grid">
@@ -706,10 +750,10 @@ function render(){
       ${overdueItems.length? cardOverdue(overdueItems):''}
       ${state.schedMode==='custom' ? unscheduledCard(schedule) : ''}
       <div class="glass card">
-        <h2>Today's plan</h2>
-        ${todayTests.map(t=>testCard(t)).join('')}
-        ${todayItems.map(i=>lectureCard(i,today)).join('')}
-        ${(todayItems.length+todayTests.length===0)?`<div class="empty">Nothing scheduled today. Add lectures or tests to fill your plan.</div>`:''}
+        <h2>${planDate===today?"Today's plan":`Plan for ${formatShort(planDate)}`}</h2>
+        ${planTests.map(t=>testCard(t)).join('')}
+        ${planItems.map(i=>lectureCard(i,planDate)).join('')}
+        ${(planItems.length+planTests.length===0)?`<div class="empty">Nothing scheduled for this day.</div>`:''}
       </div>
       ${upcomingCard(schedule,testsMap,today)}
     </div>
@@ -717,6 +761,9 @@ function render(){
       <div class="glass card">
         <h2>Subjects</h2>
         ${state.subjects.map(s=>subjectRow(s)).join('')}
+      </div>
+      <div class="glass card month-calendar">
+        ${monthCalendar()}
       </div>
       <div class="glass card">
         <h2>Your week</h2>
@@ -870,7 +917,7 @@ function lectureCard(item, date, overdue=false){
       <span class="task-meta">${fmtHM(item.minutes)}</span>
       <div class="row">
         <button class="btn ghost sm timer-btn" id="timerbtn-${item.id}" onclick="toggleTimer('${item.id}')">▶ Focus</button>
-        <select onchange="moveItem('${item.id}',this.value)" class="btn ghost sm" style="padding:5px 8px">
+        <select onchange="moveItem('${item.id}',this.value,'${date}')" class="btn ghost sm" style="padding:5px 8px">
           <option value="">Move to…</option>
           <option value="tomorrow">Tomorrow</option>
           <option value="nextweek">Next week</option>
@@ -909,6 +956,71 @@ function subjectRow(sub){
     <div class="subj-bar"><div class="subj-fill" style="width:${pct}%;background:${c}"></div></div>
   </div>`;
 }
+function calendarDateKey(y,m,d){
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+function monthCalendar(){
+  const y=calendarMonth.getFullYear();
+  const m=calendarMonth.getMonth();
+  const first=new Date(y,m,1);
+  const last=new Date(y,m+1,0);
+  const start=(first.getDay()+6)%7; // Monday first
+  const total=Math.ceil((start+last.getDate())/7)*7;
+  const today=todayStr();
+  const schedule=computeSchedule();
+  const testsMap=testsByDate();
+  const monthName=calendarMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+
+  let html=`
+    <div class="month-cal-head">
+      <div class="month-cal-title">${monthName}</div>
+      <div class="month-cal-nav">
+        <button type="button" aria-label="Previous month" onclick="changeCalendarMonth(-1)">‹</button>
+        <button type="button" aria-label="Next month" onclick="changeCalendarMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="month-cal-grid">
+      ${['M','T','W','T','F','S','S'].map(d=>`<div class="month-cal-dow">${d}</div>`).join('')}`;
+
+  for(let i=0;i<total;i++){
+    const day=i-start+1;
+    const d=new Date(y,m,day);
+    const ds=calendarDateKey(d.getFullYear(),d.getMonth(),d.getDate());
+    const inMonth=d.getMonth()===m;
+    const hasPlan=!!((schedule[ds]&&schedule[ds].length)||(testsMap[ds]&&testsMap[ds].length));
+    const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    const off=(state.daysOff[dow]||'Study')!=='Study';
+    html+=`<button type="button"
+      class="month-cal-day ${inMonth?'':'muted'} ${hasPlan?'has-plan':''} ${ds===today?'today':''} ${ds===selectedPlanDate?'selected':''} ${off?'off':''}"
+      onclick="selectCalendarDate('${ds}')"
+      aria-label="${d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}">${d.getDate()}</button>`;
+  }
+
+  html+=`</div>
+    <div class="month-cal-footer">
+      <button type="button" class="month-cal-today" onclick="calendarToday()">Today</button>
+    </div>`;
+  return html;
+}
+
+function changeCalendarMonth(delta){
+  calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+delta,1);
+  render();
+}
+
+function selectCalendarDate(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  calendarMonth=new Date(d.getFullYear(),d.getMonth(),1);
+  showDatePlan(dateStr);
+}
+
+function calendarToday(){
+  const d=new Date();
+  calendarMonth=new Date(d.getFullYear(),d.getMonth(),1);
+  showDatePlan(todayStr());
+}
+
 function weekStrip(){
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const today=new Date(); const startOfWeek=new Date(today); startOfWeek.setDate(today.getDate()-today.getDay());
@@ -916,7 +1028,7 @@ function weekStrip(){
   let html='';
   for(let i=0;i<7;i++){
     const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
-    const ds=d.toISOString().slice(0,10);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const dow=days[i];
     const type=state.daysOff[dow]||'Study';
     const lectures=(schedule[ds]||[]).map(x=>x.subject);
@@ -924,7 +1036,7 @@ function weekStrip(){
     const uniq=[...new Set(lectures)];
     const isToday = ds===todayStr();
     let label = type!=='Study'? type : (uniq.length? uniq.join(' · ') : (tests?`${tests} test`:'—'));
-    html+=`<div class="week-day ${isToday?'today':''} ${type!=='Study'?'off':''}"><span class="lbl">${dow.toUpperCase()}</span><span>${label}</span></div>`;
+    html+=`<button type="button" class="week-day ${isToday?'today':''} ${ds===selectedPlanDate?'selected':''} ${type!=='Study'?'off':''}" onclick="showDatePlan('${ds}')"><span class="lbl">${dow.toUpperCase()}</span><span>${label}</span></button>`;
   }
   return html;
 }
@@ -937,6 +1049,16 @@ function upcomingCard(schedule,testsMap,today){
     ${tests.map(t=>testCard(t)).join('')}
     ${items.map(i=>lectureCard(i,tmr)).join('')}
   </div>`;
+}
+
+/* ============== DATE PLAN VIEW ============== */
+function showDatePlan(dateStr){
+  selectedPlanDate=dateStr;
+  const d=new Date(dateStr+'T00:00:00');
+  calendarMonth=new Date(d.getFullYear(),d.getMonth(),1);
+  currentView='dashboard';
+  render();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 /* ============== ACTIONS ============== */
@@ -970,15 +1092,23 @@ function toggleTestDone(id){
   save(); render();
 }
 function deleteTest(id){ state.tests=state.tests.filter(t=>t.id!==id); save(); render(); }
-function moveItem(id,val){
+function moveItem(id,val,fromDate){
   if(!val) return;
   let target;
-  const today=todayStr();
-  if(val==='tomorrow') target=nextStudyDay(today);
-  else if(val==='nextweek'){ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()+7); target=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-  else if(val==='custom'){ target=prompt('Enter date (YYYY-MM-DD):', nextStudyDay(today)); if(!target) return; }
+  const base=fromDate || selectedPlanDate || todayStr();
+  if(val==='tomorrow') target=nextStudyDay(base);
+  else if(val==='nextweek'){
+    const d=new Date(base+'T00:00:00');
+    d.setDate(d.getDate()+7);
+    target=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  } else if(val==='custom'){
+    target=prompt('Enter date (YYYY-MM-DD):', nextStudyDay(base));
+    if(!target) return;
+  }
   state.movedItems[id]=target;
-  save(); render(); toast('Moved');
+  save();
+  render();
+  toast(`Moved to ${formatShort(target)}`);
 }
 function markAllDoneToday(){
   const schedule=computeSchedule(); const today=todayStr();
