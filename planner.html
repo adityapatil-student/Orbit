@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Orbit — Study Planner</title>
+<style>
+:root{
+  --bg:#f7f7fb; --panel:#ffffff; --surface:#f4f4f9; --border:rgba(0,0,0,0.07);
+  --ink:#141417; --sidebar:#141417; --ink-inv:#111;
+  --lime:#c8f169; --mint:#bdf3d4; --peach:#ffd9b3; --sky:#c9e6fb;
+  --accent:#6d5ef2; --accent2:#4636c9; --accent-soft:#eae7fd;
+  --txt-dim:#6b6b76; --txt-faint:#a3a3ae;
+  --good:#22c55e; --warn:#eab308; --bad:#ef4444;
+  --radius:20px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+body[data-dark="1"]{ --bg:#0d0d12; --panel:#1a1a22; --surface:#22222c; --border:rgba(255,255,255,0.08);
+  --ink:#f2f2f7; --sidebar:#000000; --ink-inv:#fff;
+  --txt-dim:#a7a7b4; --txt-faint:#6f6f7d;
+  --stat1:#2a2440; --stat2:#3a331a; --stat3:#173328; --stat-ink:#f2f2f7; }
+body:not([data-dark="1"]){ --stat1:var(--accent-soft); --stat2:#fff4d6; --stat3:var(--mint); --stat-ink:#141417; }
+body[data-theme="lilac"]{ --accent:#6d5ef2; --accent2:#4636c9; --accent-soft:#eae7fd; }
+body[data-theme="sunset"]{ --accent:#ff7a45; --accent2:#d94f1e; --accent-soft:#ffe6d9; }
+body[data-theme="ocean"]{ --accent:#0ea5e9; --accent2:#0369a1; --accent-soft:#dcf1fb; }
+body[data-theme="berry"]{ --accent:#e6549c; --accent2:#a52e6b; --accent-soft:#fbe3ef; }
+body[data-theme="forest"]{ --accent:#22a35f; --accent2:#146638; --accent-soft:#dbf5e5; }
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{
+  margin:0; font-family:'Inter',system-ui,-apple-system,sans-serif;
+  background:var(--bg); color:var(--ink); min-height:100%; overflow-x:hidden;
+  transition:background .25s,color .25s;
+}
+h1,h2,h3,.brand,.hero h1{font-family:'Space Grotesk',sans-serif}
+::-webkit-scrollbar{width:8px} ::-webkit-scrollbar-thumb{background:#ccc;border-radius:8px}
+
+.glass{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:0 2px 10px rgba(0,0,0,0.04); }
+button{font-family:inherit; cursor:pointer}
+input,select,textarea{font-family:inherit; color:var(--ink); background:var(--surface);
+  border:1px solid var(--border); border-radius:10px; padding:8px 10px; outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ink)}
+
+/* ===== SHELL ===== */
+.shell{display:flex; min-height:100vh}
+.sidebar{
+  width:220px; background:var(--sidebar); color:#eee; flex-shrink:0;
+  display:flex; flex-direction:column; padding:20px 14px;
+  padding-top:calc(20px + env(safe-area-inset-top,0px));
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.sidebar .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;padding:6px 8px 22px}
+.sidebar .brand .orb{width:22px;height:22px;border-radius:7px;background:var(--accent)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;color:#bbb;font-size:13.5px;margin-bottom:4px;background:none;border:none;width:100%;text-align:left}
+.nav-item.active{background:var(--panel);color:var(--ink);font-weight:600}
+.nav-item:hover:not(.active){background:rgba(255,255,255,0.06)}
+.sidebar-foot{margin-top:auto;padding:14px;border-radius:16px;background:linear-gradient(160deg,var(--accent),var(--accent2));color:#111}
+.sidebar-foot b{display:block;font-size:13px;margin-bottom:6px}
+.sidebar-foot button{margin-top:8px;background:#111;color:#fff;border:none;border-radius:10px;padding:7px 12px;font-size:12px;width:100%}
+
+.main{flex:1; min-width:0}
+.topbar{
+  position:sticky; top:0; z-index:50; padding:16px 26px; padding-top:calc(16px + env(safe-area-inset-top,0px));
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--bg);
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.topbar-left .who b{display:block;font-size:14px}
+.topbar-left .who span{font-size:12px;color:var(--txt-dim)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.pill{padding:7px 14px;border-radius:999px;font-size:12.5px;color:var(--txt-dim);border:1px solid var(--border);background:var(--panel)}
+.iconbtn{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--panel);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:16px}
+.iconbtn:hover{background:var(--surface)}
+.dark-toggle{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--panel);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ===== LAYOUT ===== */
+.wrap{max-width:1180px;margin:0 auto;padding:6px 26px 80px}
+.grid{display:grid; grid-template-columns:2.1fr 1fr; gap:18px}
+@media(max-width:880px){.grid{grid-template-columns:1fr} .sidebar{display:none}}
+.card{padding:18px; margin-bottom:16px}
+h2{margin:0 0 12px;font-size:14.5px;font-weight:700;color:var(--ink);letter-spacing:.1px}
+h3{margin:0;font-size:16px}
+.muted{color:var(--txt-dim)} .faint{color:var(--txt-faint)}
+
+/* Hero */
+.hero{padding:24px;background:var(--panel)}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px}
+.hero h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.5px}
+.hero .date{font-size:13px;color:var(--txt-dim)}
+.progress-outer{height:10px;border-radius:6px;background:var(--surface);overflow:hidden;margin-top:16px}
+.progress-inner{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px;transition:width .4s}
+.hero-stats{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+.stat{font-size:13px;color:var(--txt-dim);flex:1;min-width:120px;background:var(--surface);border-radius:14px;padding:12px 14px}
+.stat b{color:var(--ink);font-size:20px;display:block;font-weight:800}
+.streak{display:flex;align-items:center;gap:6px;font-weight:800;color:var(--stat-ink);background:var(--stat1);padding:7px 14px;border-radius:999px;font-size:13px}
+
+/* Buttons */
+.btn{border:none;border-radius:12px;padding:10px 18px;font-size:13.5px;font-weight:700;color:#fff;
+  background:#111; box-shadow:none}
+.btn:hover{filter:brightness(1.2)}
+.btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--border)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.btn.danger{background:#fde8e8;color:#c0392b;border:1px solid #f3c1c1}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 16px}
+
+/* Task cards */
+.task{padding:14px 16px;border-radius:16px;margin-bottom:10px;border:1px solid var(--border);background:var(--surface);
+  display:flex;flex-direction:column;gap:8px}
+.task.done{opacity:.5}
+.task.done .task-title{text-decoration:line-through}
+.task.overdue{border-color:#f3c1c1;background:#fdf1f1}
+.task-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.task-tag{font-size:10.5px;font-weight:800;padding:3px 10px;border-radius:999px;letter-spacing:.3px}
+.tag-lec{background:var(--accent-soft);color:var(--accent2)}
+.tag-test{background:var(--panel)4d6;color:#9a7b06}
+.task-title{font-size:14.5px;font-weight:700;margin:2px 0}
+.task-sub{font-size:12px;color:var(--txt-dim)}
+.badge-overdue{font-size:10.5px;color:var(--bad);font-weight:800}
+.task-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.task-meta{font-size:12px;color:var(--txt-faint);font-weight:600}
+.empty{padding:26px;text-align:center;color:var(--txt-faint);font-size:13.5px}
+
+/* subject bars */
+.subj-row{margin-bottom:14px}
+.subj-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;font-weight:600}
+.subj-top .name{display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.subj-bar{height:8px;border-radius:5px;background:var(--surface);overflow:hidden}
+.subj-fill{height:100%;border-radius:5px}
+
+/* week strip */
+.week-strip{display:flex;flex-direction:column;gap:6px}
+.week-day{display:flex;justify-content:space-between;font-size:12.5px;padding:9px 12px;border-radius:12px;background:var(--surface)}
+.week-day.today{background:#111;color:#fff}
+.week-day .lbl{color:inherit;font-weight:700;width:34px;opacity:.6}
+.week-day.off{opacity:.5}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(20,20,20,0.4);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
+.overlay.show{display:flex}
+.modal{width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:22px}
+.modal h3{margin-bottom:14px}
+.field{margin-bottom:12px;display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12.5px;color:var(--txt-dim);font-weight:600}
+.field input,.field select{width:100%}
+.field-row{display:flex;gap:8px}
+.field-row .field{flex:1}
+.close-x{position:absolute;top:16px;right:16px;background:var(--surface);border:none;color:var(--txt-dim);font-size:15px;width:30px;height:30px;border-radius:50%}
+.modal{position:relative}
+.chip-toggle{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:7px 13px;border-radius:999px;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--txt-dim);font-weight:600}
+.chip.active{background:#111;color:#fff;border-color:transparent}
+
+/* subject builder list */
+.mini-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.mini-item{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:12px;background:var(--surface);font-size:13px}
+.mini-item .del{color:var(--bad);background:none;border:none;font-size:13px}
+
+.chapter-block{border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:12px;background:var(--surface)}
+.chapter-head{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.chapter-head input{flex:1}
+.lecture-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.lecture-row input.lec-title{flex:1}
+.lecture-row input.lec-time{width:52px;text-align:center;padding:8px 4px}
+.lecture-row .colon{color:var(--txt-faint);font-size:12px}
+.lecture-row .del{background:none;border:none;color:var(--bad);font-size:14px;padding:4px}
+.icon-del{background:none;border:none;color:var(--bad);font-size:15px}
+.add-lec-btn{background:none;border:1px dashed rgba(0,0,0,0.15);color:var(--accent2);border-radius:10px;padding:7px 10px;font-size:12px;width:100%;margin-top:4px;font-weight:600}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#111;color:#fff;
+  padding:11px 20px;border-radius:12px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+.setup-empty{text-align:center;padding:60px 20px}
+.setup-empty .orb-big{width:64px;height:64px;border-radius:20px;margin:0 auto 18px;background:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand"><div class="orb"></div>Orbit</div>
+    <button class="nav-item active">📊 Dashboard</button>
+    <button class="nav-item" onclick="openSubjectBuilder()">📚 Subjects</button>
+    <button class="nav-item" onclick="openModal('testModal')">📝 Tests</button>
+    <button class="nav-item" onclick="openModal('breakModal')">🌤 Breaks</button>
+    <button class="nav-item" onclick="openDaysOff()">📅 Week plan</button>
+    <button class="nav-item" onclick="openSettingsPrefillAndOpen()">⚙ Settings</button>
+    <div class="sidebar-foot">
+      <b>Keep your streak</b>
+      <span style="font-size:12px;opacity:.75">Finish today's plan to keep the fire going.</span>
+      <button onclick="markAllDoneToday()">Mark today done</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="avatar" id="avatarInit">O</div>
+        <div class="who"><b id="uname-display">Orbit</b><span id="goalPill">Set goal</span></div>
+      </div>
+      <div class="topbar-right">
+        <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Dark mode">🌙</button>
+        <button class="iconbtn" onclick="openSettingsPrefillAndOpen()" title="Settings">⚙</button>
+      </div>
+    </div>
+    <div class="wrap" id="app"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settingsModal">
+  <div class="modal glass">
+    <button class="close-x" onclick="closeModal('settingsModal')">✕</button>
+    <h3>Settings</h3>
+    <div class="field"><label>Your name</label><input id="setName" placeholder="e.g. Aditya"></div>
+    <div class="field">
+      <label>Profile photo</label>
+      <div class="row">
+        <div id="avatarPreview" style="width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:700"></div>
+        <label class="btn ghost sm">Upload<input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="uploadAvatar(event)"></label>
+        <button class="btn ghost sm" onclick="removeAvatar()">Remove</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Color theme</label>
+      <div class="chip-toggle" id="themeChips"></div>
+    </div>
+    <div class="field">
+      <label>Logo color</label>
+      <div class="row">
+        <input type="color" id="logoColorPick" value="#6d5ef2" style="width:44px;height:38px;padding:2px">
+        <button class="btn ghost sm" onclick="applyLogoColor()">Use color</button>
+        <button class="btn ghost sm" onclick="resetLogoColor()">Reset to theme</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Background</label>
+      <div class="row">
+        <input type="color" id="bgColorPick" value="#f7f7fb" style="width:44px;height:38px;padding:2px">
+        <button class="btn ghost sm" onclick="applyBgColor()">Use color</button>
+        <label class="btn ghost sm">Upload image<input type="file" id="bgFile" accept="image/*" style="display:none" onchange="uploadBg(event)"></label>
+        <button class="btn ghost sm" onclick="removeBg()">Reset</button>
+      </div>
+    </div>
+    <div class="field"><label>Goal (e.g. Class 12th, IIT-JEE)</label><input id="setGoal" placeholder="Custom goal"></div>
+    <div class="field"><label>Planner start date</label><input type="date" id="setStart"></div>
+    <div class="field"><label>Planner end date</label><input type="date" id="setEnd"></div>
+    <div class="field">
+      <label>Scheduling mode</label>
+      <select id="setSchedMode">
+        <option value="subject">Subject-wise (finish one subject, then next)</option>
+        <option value="interleave">Lecture-wise (rotate across subjects daily)</option>
+        <option value="custom">Custom (I'll assign each lecture's day myself)</option>
+      </select>
+    </div>
+    <div class="field" id="dayCapField"><label>Lectures per day</label><input type="number" min="1" id="setDayCap" value="3"></div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn" onclick="saveSettings()">Save</button>
+      <button class="btn ghost" onclick="exportData()">Export JSON</button>
+      <label class="btn ghost" style="display:inline-block">Import JSON<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)"></label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn danger" onclick="resetAll()">Reset everything</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUBJECT BUILDER MODAL -->
+<div class="overlay" id="subjectModal">
+  <div class="modal glass" style="max-width:560px">
+    <button class="close-x" onclick="closeModal('subjectModal')">✕</button>
+    <h3>Add subject</h3>
+    <div class="field"><label>Subject name</label><input id="subName" placeholder="e.g. Physics"></div>
+    <h3 style="font-size:14px;margin-top:16px">Chapters</h3>
+    <div id="chapterBuilder"></div>
+    <button class="btn ghost sm" onclick="addChapterRow()">+ Add chapter</button>
+    <div class="row" style="margin-top:16px">
+      <button class="btn" onclick="saveSubject()">Save subject</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEST MODAL -->
+<div class="overlay" id="testModal">
+  <div class="modal glass">
+    <button class="close-x" onclick="closeModal('testModal')">✕</button>
+    <h3>Add test</h3>
+    <div class="field"><label>Test name</label><input id="testName" placeholder="e.g. Practice Test 05"></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="testDate"></div>
+      <div class="field"><label>Duration (min)</label><input type="number" id="testDur" value="180"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Questions</label><input type="number" id="testQ" value="75"></div>
+      <div class="field"><label>Marks</label><input type="number" id="testMarks" value="300"></div>
+    </div>
+    <div class="row" style="margin-top:6px"><button class="btn" onclick="saveTest()">Add test</button></div>
+  </div>
+</div>
+
+<!-- BREAK MODAL -->
+<div class="overlay" id="breakModal">
+  <div class="modal glass">
+    <button class="close-x" onclick="closeModal('breakModal')">✕</button>
+    <h3>Take a break</h3>
+    <p class="muted" style="font-size:12.5px;margin-top:-6px">Tasks inside this range shift forward automatically once you save.</p>
+    <div class="field-row">
+      <div class="field"><label>From</label><input type="date" id="breakFrom"></div>
+      <div class="field"><label>To</label><input type="date" id="breakTo"></div>
+    </div>
+    <div class="row" style="margin-top:6px"><button class="btn" onclick="applyBreak()">Apply break</button></div>
+  </div>
+</div>
+
+<!-- DAYS OFF MODAL -->
+<div class="overlay" id="daysOffModal">
+  <div class="modal glass">
+    <button class="close-x" onclick="closeModal('daysOffModal')">✕</button>
+    <h3>Weekly day type</h3>
+    <p class="muted" style="font-size:12.5px;margin-top:-6px">Choose how each weekday behaves. Off / own-work days push their tasks forward.</p>
+    <div id="daysOffList"></div>
+    <div class="row" style="margin-top:10px"><button class="btn" onclick="saveDaysOff()">Save</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============== STATE ============== */
+const LS_KEY='orbit_planner_v1';
+let state = load() || defaultState();
+
+function defaultState(){
+  return {
+    name:'', goal:'', startDate:todayStr(), endDate:'',
+    subjects:[], // {id,name,chapters:[{id,name,lectures:[{id,name,minutes,done,dateAssigned}]}]}
+    tests:[], // {id,name,date,duration,questions,marks,done}
+    doneDates:{}, // dateStr: true (for streak / all-done)
+    completedItems:{}, // itemId: {completedDate}
+    movedItems:{}, // itemId: newDate override
+    daysOff:{Mon:'Study',Tue:'Study',Wed:'Study',Thu:'Study',Fri:'Study',Sat:'Study',Sun:'Study'},
+    breaks:[], // {from,to}
+    theme:'lilac',
+    onboarded:false,
+    schedMode:'subject', // 'subject' | 'interleave' | 'custom'
+    dayCap:3,
+    dark:false,
+    avatar:'', // dataURL
+    bgImage:'', // dataURL
+    bgColor:'',
+    logoColor:''
+  };
+}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function save(){localStorage.setItem(LS_KEY, JSON.stringify(state))}
+function load(){try{return JSON.parse(localStorage.getItem(LS_KEY))}catch(e){return null}}
+function uid(){return Math.random().toString(36).slice(2,10)}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+
+/* ============== SCHEDULING ============== */
+// Build a flat ordered list of all lecture-items across subjects (in creation order)
+function allLectureItems(){
+  if(state.schedMode==='interleave'){
+    // round-robin: one lecture from each subject in turn
+    const queues = state.subjects.map(sub=>{
+      const q=[];
+      sub.chapters.forEach(ch=>ch.lectures.forEach(lec=>{
+        q.push({id:lec.id,type:'lecture',name:lec.name,minutes:lec.minutes,subject:sub.name,chapter:ch.name,done:lec.done});
+      }));
+      return q;
+    });
+    const items=[]; let any=true;
+    while(any){ any=false;
+      queues.forEach(q=>{ if(q.length){ items.push(q.shift()); any=true; } });
+    }
+    return items;
+  }
+  // default: subject-wise (finish one subject's items before the next)
+  const items=[];
+  state.subjects.forEach(sub=>{
+    sub.chapters.forEach(ch=>{
+      ch.lectures.forEach(lec=>{
+        items.push({id:lec.id, type:'lecture', name:lec.name, minutes:lec.minutes,
+          subject:sub.name, chapter:ch.name, done:lec.done});
+      });
+    });
+  });
+  return items;
+}
+function isDayOff(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+  const type=state.daysOff[dow]||'Study';
+  if(type!=='Study') return true;
+  return state.breaks.some(b=> dateStr>=b.from && dateStr<=b.to);
+}
+function nextStudyDay(dateStr){
+  let d=new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+1);
+  let ds=d.toISOString().slice(0,10);
+  let guard=0;
+  while(isDayOff(ds) && guard<400){ d.setDate(d.getDate()+1); ds=d.toISOString().slice(0,10); guard++; }
+  return ds;
+}
+// Assign dates to all pending (not-done) lecture items sequentially, ~3 items per study day, honoring manual moves
+function computeSchedule(){
+  const items=allLectureItems();
+  const pending=items.filter(i=>!i.done);
+  const dayCap=state.dayCap||3;
+  const schedule={}; // date -> [items]
+  let dayCount=0;
+  let curDate=isDayOff(state.startDate)? nextStudyDay(dateBefore(state.startDate)) : state.startDate;
+  pending.forEach(item=>{
+    if(state.movedItems[item.id]){
+      const md=state.movedItems[item.id];
+      schedule[md]=schedule[md]||[]; schedule[md].push(item);
+      return;
+    }
+    if(state.schedMode==='custom'){
+      schedule['unscheduled']=schedule['unscheduled']||[]; schedule['unscheduled'].push(item);
+      return;
+    }
+    if(dayCount>=dayCap){ curDate=nextStudyDay(curDate); dayCount=0; }
+    schedule[curDate]=schedule[curDate]||[]; schedule[curDate].push(item);
+    dayCount++;
+  });
+  return schedule;
+}
+function dateBefore(ds){const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)}
+
+function testsByDate(){
+  const m={};
+  state.tests.forEach(t=>{ if(!t.done){ m[t.date]=m[t.date]||[]; m[t.date].push(t);} });
+  return m;
+}
+
+/* ============== PROGRESS ============== */
+const SUBJECT_PALETTE=['#b7a9f5','#ff9466','#5cc8f2','#f28cc0','#7dd68c','#f5c542','#7f7fe0','#ef7e7e'];
+function subjectColor(subName){
+  const idx = state.subjects.findIndex(s=>s.name===subName);
+  return SUBJECT_PALETTE[idx>=0? idx % SUBJECT_PALETTE.length : 0];
+}
+function subjectProgress(sub){
+  let total=0, done=0;
+  sub.chapters.forEach(ch=>ch.lectures.forEach(l=>{total++; if(l.done)done++}));
+  return total? Math.round(done/total*100):0;
+}
+function overallProgress(){
+  const items=allLectureItems();
+  if(!items.length) return {done:0,total:0,pct:0};
+  const done=items.filter(i=>i.done).length;
+  return {done,total:items.length,pct:Math.round(done/items.length*100)};
+}
+function badgeRow(streak){
+  const milestones=[{d:3,e:'🌱',l:'3-day'},{d:7,e:'⚡',l:'1-week'},{d:14,e:'🔥',l:'2-week'},{d:30,e:'🏅',l:'1-month'},{d:60,e:'💎',l:'2-month'},{d:100,e:'👑',l:'100-day'}];
+  const earned=milestones.filter(m=>streak>=m.d);
+  if(!earned.length) return '';
+  return `<div class="row" style="margin-top:12px;gap:6px">${earned.map(m=>`<span class="pill" title="${m.l} streak" style="padding:4px 10px;font-size:13px">${m.e} ${m.l}</span>`).join('')}</div>`;
+}
+function computeStreak(){
+  let streak=0; let d=new Date();
+  for(let i=0;i<400;i++){
+    const ds=d.toISOString().slice(0,10);
+    if(state.doneDates[ds]) streak++;
+    else if(ds===todayStr()) { /* today not done yet, don't break streak count of past */ }
+    else break;
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+
+/* ============== RENDER ============== */
+function render(){
+  document.getElementById('uname-display').textContent = state.name? state.name : 'Orbit';
+  document.getElementById('goalPill').textContent = state.goal? state.goal : 'Set goal';
+  document.getElementById('avatarInit').textContent = state.avatar? '' : (state.name? state.name[0].toUpperCase() : 'O');
+  document.getElementById('avatarInit').style.backgroundImage = state.avatar? `url(${state.avatar})`:'';
+  document.getElementById('avatarInit').style.backgroundSize='cover';
+  document.getElementById('avatarInit').style.backgroundPosition='center';
+
+  const app=document.getElementById('app');
+  if(!state.onboarded){
+    renderOnboarding(); return;
+  }
+  if(!state.subjects.length){
+    app.innerHTML = `
+    <div class="glass setup-empty">
+      <div class="orb-big"></div>
+      <h1 style="margin:0 0 8px">Let's set up your planner</h1>
+      <p class="muted" style="max-width:420px;margin:0 auto 20px">Add your first subject with chapters and lecture counts to start tracking your daily plan.</p>
+      <button class="btn" onclick="openSubjectBuilder()">+ Add subject</button>
+    </div>`;
+    return;
+  }
+
+  const today=todayStr();
+  const schedule=computeSchedule();
+  const testsMap=testsByDate();
+  const todayItems=(schedule[today]||[]);
+  const todayTests=(testsMap[today]||[]);
+  const overdueDates=Object.keys(schedule).filter(d=>d<today);
+  const overdueItems=[]; overdueDates.forEach(d=>schedule[d].forEach(i=>overdueItems.push({...i,origDate:d})));
+
+  const prog=overallProgress();
+  const streak=computeStreak();
+  const allDoneToday = todayItems.every(i=>i.done) && todayTests.every(t=>t.done) && (todayItems.length+todayTests.length>0);
+
+  app.innerHTML = `
+  <div class="glass hero">
+    <div class="hero-top">
+      <div>
+        <h1>${greeting()}, ${state.name||'Student'} 👋</h1>
+        <div class="date">${formatDate(today)}</div>
+        <div class="date" style="margin-top:4px;font-style:italic">"${quoteOfDay()}"</div>
+      </div>
+      <div class="streak">🔥 ${streak} day${streak==1?'':'s'}</div>
+    </div>
+    ${badgeRow(streak)}
+    <div class="progress-outer"><div class="progress-inner" style="width:${prog.pct}%"></div></div>
+    <div class="hero-stats">
+      <div class="stat" style="background:var(--stat1);color:var(--stat-ink)"><b>${prog.done}/${prog.total}</b>Lectures done</div>
+      <div class="stat" style="background:var(--stat2);color:var(--stat-ink)"><b>${prog.pct}%</b>Overall progress</div>
+      <div class="stat" style="background:var(--stat3);color:var(--stat-ink)"><b>${state.tests.filter(t=>!t.done).length}</b>Tests pending</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn ghost sm" onclick="openSubjectBuilder()">+ Subject</button>
+    <button class="btn ghost sm" onclick="openModal('testModal')">+ Test</button>
+    <button class="btn ghost sm" onclick="openModal('breakModal')">Take a break</button>
+    <button class="btn ghost sm" onclick="openDaysOff()">Days off</button>
+    <button class="btn ghost sm" ${allDoneToday?'disabled':''} onclick="markAllDoneToday()">✓ All done for today</button>
+  </div>
+
+  <div class="grid">
+    <div>
+      ${overdueItems.length? cardOverdue(overdueItems):''}
+      ${state.schedMode==='custom' ? unscheduledCard(schedule) : ''}
+      <div class="glass card">
+        <h2>Today's plan</h2>
+        ${todayTests.map(t=>testCard(t)).join('')}
+        ${todayItems.map(i=>lectureCard(i,today)).join('')}
+        ${(todayItems.length+todayTests.length===0)?`<div class="empty">Nothing scheduled today. Add lectures or tests to fill your plan.</div>`:''}
+      </div>
+      ${upcomingCard(schedule,testsMap,today)}
+    </div>
+    <div>
+      <div class="glass card">
+        <h2>Subjects</h2>
+        ${state.subjects.map(s=>subjectRow(s)).join('')}
+      </div>
+      <div class="glass card">
+        <h2>Your week</h2>
+        <div class="week-strip">${weekStrip()}</div>
+      </div>
+      <div class="glass card">
+        <h2>Tests</h2>
+        ${state.tests.length? state.tests.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(t=>testListRow(t)).join(''):'<div class="empty">No tests yet</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+const GOAL_OPTIONS=['Class 11th','Class 12th','IIT-JEE','NEET','Foundation','Custom'];
+let obStep=1, obGoalChoice='';
+function renderOnboarding(){
+  const app=document.getElementById('app');
+  if(obStep===1){
+    app.innerHTML=`
+    <div class="glass setup-empty" style="max-width:440px;margin:60px auto">
+      <div class="orb-big"></div>
+      <h1 style="margin:0 0 6px">Welcome to Orbit</h1>
+      <p class="muted" style="margin:0 0 20px">What should we call you?</p>
+      <div class="field" style="text-align:left;max-width:280px;margin:0 auto 16px">
+        <input id="obName" placeholder="Your name" style="width:100%;text-align:center;font-size:15px;padding:12px">
+      </div>
+      <button class="btn" onclick="obNext1()">Continue</button>
+    </div>`;
+    setTimeout(()=>document.getElementById('obName')?.focus(),50);
+    return;
+  }
+  if(obStep===2){
+    app.innerHTML=`
+    <div class="glass setup-empty" style="max-width:520px;margin:60px auto">
+      <div class="orb-big"></div>
+      <h1 style="margin:0 0 6px">Hi ${state.name} 👋</h1>
+      <p class="muted" style="margin:0 0 20px">What are you preparing for?</p>
+      <div class="chip-toggle" style="justify-content:center;max-width:420px;margin:0 auto 18px" id="goalChips">
+        ${GOAL_OPTIONS.map(g=>`<button type="button" class="chip" style="padding:9px 16px;font-size:13px" onclick="pickGoal('${g}')">${g}</button>`).join('')}
+      </div>
+      <div id="customGoalWrap" style="display:none;max-width:280px;margin:0 auto 16px">
+        <input id="obCustomGoal" placeholder="Type your goal">
+      </div>
+      <button class="btn" onclick="obNext2()">Continue</button>
+    </div>`;
+    return;
+  }
+  if(obStep===3){
+    app.innerHTML=`
+    <div class="glass setup-empty" style="max-width:440px;margin:60px auto">
+      <div class="orb-big"></div>
+      <h1 style="margin:0 0 6px">Almost there</h1>
+      <p class="muted" style="margin:0 0 20px">When does your planner start?</p>
+      <div class="field" style="text-align:left;max-width:260px;margin:0 auto 16px">
+        <input type="date" id="obStart" value="${todayStr()}" style="width:100%;text-align:center;padding:12px">
+      </div>
+      <button class="btn" onclick="obFinish()">Start planning →</button>
+    </div>`;
+    return;
+  }
+}
+function obNext1(){
+  const v=document.getElementById('obName').value.trim();
+  if(!v){toast('Enter your name');return;}
+  state.name=v; save(); obStep=2; render();
+}
+function pickGoal(g){
+  obGoalChoice=g;
+  document.querySelectorAll('#goalChips .chip').forEach(b=>b.classList.toggle('active', b.textContent===g));
+  document.getElementById('customGoalWrap').style.display = g==='Custom'?'block':'none';
+}
+function obNext2(){
+  let goal=obGoalChoice;
+  if(!goal){toast('Pick a goal');return;}
+  if(goal==='Custom'){ goal=document.getElementById('obCustomGoal').value.trim(); if(!goal){toast('Type your goal');return;} }
+  state.goal=goal; save(); obStep=3; render();
+}
+function obFinish(){
+  state.startDate=document.getElementById('obStart').value || todayStr();
+  state.onboarded=true; save(); render(); toast('Welcome aboard!');
+}
+
+function greeting(){
+  const h=new Date().getHours();
+  if(h<12) return 'Good morning'; if(h<17) return 'Good afternoon'; return 'Good evening';
+}
+const QUOTES=[
+  'Small steps every day beat big leaps some days.',
+  'Discipline is choosing what you want most over what you want now.',
+  'The plan works if you work the plan.',
+  'Consistency compounds — show up today.',
+  'Progress, not perfection.',
+  'Future you is built by today you.',
+  'One chapter at a time gets the whole syllabus done.'
+];
+function quoteOfDay(){
+  const day=new Date(); const seed=day.getFullYear()*1000+ (day.getMonth()+1)*31 + day.getDate();
+  return QUOTES[seed % QUOTES.length];
+}
+function formatDate(ds){
+  const d=new Date(ds+'T00:00:00');
+  return d.toLocaleDateString('en-US',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+function unscheduledCard(schedule){
+  const items=schedule['unscheduled']||[];
+  if(!items.length) return '';
+  return `<div class="glass card" style="border-color:rgba(251,191,36,.35)">
+    <h2 style="color:var(--warn)">Unscheduled — assign a day (${items.length})</h2>
+    ${items.map(i=>lectureCardCustom(i)).join('')}
+  </div>`;
+}
+function lectureCardCustom(item){
+  return `<div class="task">
+    <div class="task-top">
+      <div>
+        <span class="task-tag tag-lec">LECTURE</span>
+        <div class="task-title">${item.name}</div>
+        <div class="task-sub">${item.subject} · ${item.chapter}</div>
+      </div>
+    </div>
+    <div class="task-bottom">
+      <span class="task-meta">${fmtHM(item.minutes)}</span>
+      <input type="date" onchange="assignCustomDate('${item.id}',this.value)" style="padding:6px 8px">
+    </div>
+  </div>`;
+}
+function assignCustomDate(id,date){
+  if(!date) return;
+  state.movedItems[id]=date; save(); render(); toast('Scheduled');
+}
+function cardOverdue(items){
+  return `<div class="glass card" style="border-color:rgba(248,113,113,.35)">
+    <h2 style="color:#fca5a5">Overdue (${items.length})</h2>
+    ${items.map(i=>lectureCard(i,i.origDate,true)).join('')}
+  </div>`;
+}
+function fmtHM(mins){const h=Math.floor(mins/60),m=mins%60; return h? `${h}h ${m}m` : `${m}m`;}
+function lectureCard(item, date, overdue=false){
+  const c=subjectColor(item.subject);
+  return `<div class="task ${item.done?'done':''} ${overdue?'overdue':''}" style="border-left:4px solid ${c}">
+    <div class="task-top">
+      <div>
+        <span class="task-tag tag-lec" style="background:${c}22;color:${c}">LECTURE</span>
+        ${overdue?`<span class="badge-overdue">OVERDUE</span>`:''}
+        <div class="task-title">${item.name}</div>
+        <div class="task-sub">${item.subject} · ${item.chapter}</div>
+      </div>
+    </div>
+    <div class="task-bottom">
+      <span class="task-meta">${fmtHM(item.minutes)}</span>
+      <div class="row">
+        <button class="btn ghost sm timer-btn" id="timerbtn-${item.id}" onclick="toggleTimer('${item.id}')">▶ Focus</button>
+        <select onchange="moveItem('${item.id}',this.value)" class="btn ghost sm" style="padding:5px 8px">
+          <option value="">Move to…</option>
+          <option value="tomorrow">Tomorrow</option>
+          <option value="nextweek">Next week</option>
+          <option value="custom">Pick date…</option>
+        </select>
+        <button class="btn sm" onclick="toggleDone('${item.id}')">${item.done?'Undo':'Done'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function testCard(t){
+  return `<div class="task ${t.done?'done':''}">
+    <div class="task-top">
+      <div>
+        <span class="task-tag tag-test">TEST</span>
+        <div class="task-title">${t.name}</div>
+        <div class="task-sub">${t.questions} questions · ${t.marks} marks</div>
+      </div>
+    </div>
+    <div class="task-bottom">
+      <span class="task-meta">${t.duration} min</span>
+      <button class="btn sm" onclick="toggleTestDone('${t.id}')">${t.done?'Undo':'Done'}</button>
+    </div>
+  </div>`;
+}
+function testListRow(t){
+  return `<div class="mini-item"><span>${t.name} <span class="faint">· ${formatShort(t.date)}</span></span>
+    <button class="del" onclick="deleteTest('${t.id}')">✕</button></div>`;
+}
+function formatShort(ds){const d=new Date(ds+'T00:00:00');return d.toLocaleDateString('en-US',{day:'numeric',month:'short'})}
+
+function subjectRow(sub){
+  const pct=subjectProgress(sub); const c=subjectColor(sub.name);
+  return `<div class="subj-row">
+    <div class="subj-top"><span class="name"><span class="dot" style="background:${c}"></span>${sub.name}</span><span class="muted">${pct}%</span></div>
+    <div class="subj-bar"><div class="subj-fill" style="width:${pct}%;background:${c}"></div></div>
+  </div>`;
+}
+function weekStrip(){
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const today=new Date(); const startOfWeek=new Date(today); startOfWeek.setDate(today.getDate()-today.getDay());
+  const schedule=computeSchedule(); const testsMap=testsByDate();
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
+    const ds=d.toISOString().slice(0,10);
+    const dow=days[i];
+    const type=state.daysOff[dow]||'Study';
+    const lectures=(schedule[ds]||[]).map(x=>x.subject);
+    const tests=(testsMap[ds]||[]).length;
+    const uniq=[...new Set(lectures)];
+    const isToday = ds===todayStr();
+    let label = type!=='Study'? type : (uniq.length? uniq.join(' · ') : (tests?`${tests} test`:'—'));
+    html+=`<div class="week-day ${isToday?'today':''} ${type!=='Study'?'off':''}"><span class="lbl">${dow.toUpperCase()}</span><span>${label}</span></div>`;
+  }
+  return html;
+}
+function upcomingCard(schedule,testsMap,today){
+  const tmr=nextStudyDay(today);
+  const items=schedule[tmr]||[]; const tests=testsMap[tmr]||[];
+  if(!items.length && !tests.length) return '';
+  return `<div class="glass card">
+    <h2>Next: ${formatShort(tmr)}</h2>
+    ${tests.map(t=>testCard(t)).join('')}
+    ${items.map(i=>lectureCard(i,tmr)).join('')}
+  </div>`;
+}
+
+/* ============== ACTIONS ============== */
+/* Focus timer (in-memory, per lecture id) */
+const timers={}; // id -> {seconds, interval}
+function toggleTimer(id){
+  const btn=document.getElementById('timerbtn-'+id);
+  if(timers[id]){
+    clearInterval(timers[id].interval); delete timers[id];
+    if(btn) btn.textContent='▶ Focus';
+    return;
+  }
+  timers[id]={seconds:0};
+  timers[id].interval=setInterval(()=>{
+    timers[id].seconds++;
+    const b=document.getElementById('timerbtn-'+id);
+    if(b){ const s=timers[id].seconds; b.textContent=`⏸ ${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+  },1000);
+  if(btn) btn.textContent='⏸ 00:00';
+}
+
+function toggleDone(id){
+  state.subjects.forEach(s=>s.chapters.forEach(c=>c.lectures.forEach(l=>{
+    if(l.id===id) l.done=!l.done;
+  })));
+  markTodayIfComplete();
+  save(); render();
+}
+function toggleTestDone(id){
+  const t=state.tests.find(t=>t.id===id); if(t) t.done=!t.done;
+  save(); render();
+}
+function deleteTest(id){ state.tests=state.tests.filter(t=>t.id!==id); save(); render(); }
+function moveItem(id,val){
+  if(!val) return;
+  let target;
+  const today=todayStr();
+  if(val==='tomorrow') target=nextStudyDay(today);
+  else if(val==='nextweek'){ const d=new Date(today+'T00:00:00'); d.setDate(d.getDate()+7); target=d.toISOString().slice(0,10);}
+  else if(val==='custom'){ target=prompt('Enter date (YYYY-MM-DD):', nextStudyDay(today)); if(!target) return; }
+  state.movedItems[id]=target;
+  save(); render(); toast('Moved');
+}
+function markAllDoneToday(){
+  const schedule=computeSchedule(); const today=todayStr();
+  (schedule[today]||[]).forEach(i=>{
+    state.subjects.forEach(s=>s.chapters.forEach(c=>c.lectures.forEach(l=>{ if(l.id===i.id) l.done=true; })));
+  });
+  const tm=testsByDate(); (tm[today]||[]).forEach(t=>{ const tt=state.tests.find(x=>x.id===t.id); if(tt) tt.done=true; });
+  state.doneDates[today]=true;
+  save(); render(); toast('Marked all done for today ✓'); fireConfetti();
+}
+function fireConfetti(){
+  const colors=['#6d5ef2','#ff7a45','#0ea5e9','#e6549c','#22a35f','#eab308'];
+  for(let i=0;i<60;i++){
+    const p=document.createElement('div');
+    const size=6+Math.random()*6;
+    p.style.cssText=`position:fixed;top:-20px;left:${Math.random()*100}vw;width:${size}px;height:${size*0.6}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};z-index:999;pointer-events:none;
+      border-radius:2px;opacity:.95;transform:rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(p);
+    const dur=1800+Math.random()*1400, drift=(Math.random()-0.5)*200;
+    p.animate([
+      {transform:`translate(0,0) rotate(0deg)`, opacity:1},
+      {transform:`translate(${drift}px, 100vh) rotate(${360+Math.random()*360}deg)`, opacity:0}
+    ],{duration:dur, easing:'ease-in'});
+    setTimeout(()=>p.remove(), dur+50);
+  }
+}
+function markTodayIfComplete(){
+  const schedule=computeSchedule(); const today=todayStr(); const tm=testsByDate();
+  const items=(schedule[today]||[]); const tests=(tm[today]||[]);
+  const allDone = items.every(i=>i.done) && tests.every(t=>t.done) && (items.length+tests.length>0);
+  if(allDone) state.doneDates[today]=true; else delete state.doneDates[today];
+}
+
+/* Subject builder */
+let chapterRows=[];
+function openSubjectBuilder(){
+  document.getElementById('subName').value='';
+  chapterRows=[newChapterRow()];
+  renderChapterBuilder();
+  openModal('subjectModal');
+}
+function newChapterRow(){ return {id:uid(), name:'', lectures:[newLectureRow(1)]}; }
+function newLectureRow(n){ return {id:uid(), name:`Lecture ${n}`, hh:0, mm:45}; }
+function addChapterRow(){ chapterRows.push(newChapterRow()); renderChapterBuilder(); }
+function removeChapterRow(cIdx){ chapterRows.splice(cIdx,1); renderChapterBuilder(); }
+function addLectureRow(cIdx){ const ch=chapterRows[cIdx]; ch.lectures.push(newLectureRow(ch.lectures.length+1)); renderChapterBuilder(); }
+function removeLectureRow(cIdx,lIdx){ chapterRows[cIdx].lectures.splice(lIdx,1); renderChapterBuilder(); }
+
+function renderChapterBuilder(){
+  const el=document.getElementById('chapterBuilder');
+  el.innerHTML = chapterRows.map((c,cIdx)=>`
+    <div class="chapter-block">
+      <div class="chapter-head">
+        <input value="${c.name}" oninput="chapterRows[${cIdx}].name=this.value" placeholder="Chapter name e.g. Kinematics">
+        <button class="icon-del" onclick="removeChapterRow(${cIdx})" title="Remove chapter">✕</button>
+      </div>
+      ${c.lectures.map((l,lIdx)=>`
+        <div class="lecture-row">
+          <input class="lec-title" value="${l.name}" oninput="chapterRows[${cIdx}].lectures[${lIdx}].name=this.value" placeholder="Lecture title">
+          <input class="lec-time" type="number" min="0" value="${l.hh}" oninput="chapterRows[${cIdx}].lectures[${lIdx}].hh=+this.value" title="Hours">
+          <span class="colon">h</span>
+          <input class="lec-time" type="number" min="0" max="59" value="${l.mm}" oninput="chapterRows[${cIdx}].lectures[${lIdx}].mm=+this.value" title="Minutes">
+          <span class="colon">m</span>
+          <button class="del" onclick="removeLectureRow(${cIdx},${lIdx})">✕</button>
+        </div>`).join('')}
+      <button type="button" class="add-lec-btn" onclick="addLectureRow(${cIdx})">+ Add lecture</button>
+    </div>`).join('');
+}
+function saveSubject(){
+  const name=document.getElementById('subName').value.trim();
+  if(!name){toast('Enter a subject name');return;}
+  const chapters = chapterRows.filter(c=>c.name.trim()).map(c=>({
+    id:c.id, name:c.name.trim(),
+    lectures: c.lectures.filter(l=>l.name.trim()).map(l=>({
+      id:l.id, name:l.name.trim(), minutes:(+l.hh||0)*60+(+l.mm||0), done:false
+    }))
+  })).filter(c=>c.lectures.length);
+  if(!chapters.length){toast('Add at least one chapter with a lecture');return;}
+  state.subjects.push({id:uid(),name,chapters});
+  save(); closeModal('subjectModal'); render(); toast('Subject added');
+}
+
+/* Test modal */
+function saveTest(){
+  const name=document.getElementById('testName').value.trim();
+  const date=document.getElementById('testDate').value || todayStr();
+  const duration=+document.getElementById('testDur').value||60;
+  const questions=+document.getElementById('testQ').value||0;
+  const marks=+document.getElementById('testMarks').value||0;
+  if(!name){toast('Enter a test name');return;}
+  state.tests.push({id:uid(),name,date,duration,questions,marks,done:false});
+  save(); closeModal('testModal'); render(); toast('Test added');
+}
+
+/* Break modal */
+function applyBreak(){
+  const from=document.getElementById('breakFrom').value, to=document.getElementById('breakTo').value;
+  if(!from||!to){toast('Pick both dates');return;}
+  state.breaks.push({from,to});
+  save(); closeModal('breakModal'); render(); toast('Break applied — schedule shifted');
+}
+
+/* Days off modal */
+function openDaysOff(){
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const el=document.getElementById('daysOffList');
+  el.innerHTML = days.map(d=>`
+    <div class="field">
+      <label>${d}</label>
+      <div class="chip-toggle" id="chip-${d}">
+        ${['Study','Day off','My own work'].map(opt=>`<button type="button" class="chip ${state.daysOff[d]===opt?'active':''}" onclick="setDayOffChip('${d}','${opt}')">${opt}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  openModal('daysOffModal');
+}
+let pendingDaysOff=null;
+function setDayOffChip(d,opt){
+  pendingDaysOff = pendingDaysOff || {...state.daysOff};
+  pendingDaysOff[d]=opt;
+  document.querySelectorAll(`#chip-${d} .chip`).forEach(b=>b.classList.toggle('active', b.textContent===opt));
+}
+function saveDaysOff(){
+  if(pendingDaysOff) state.daysOff=pendingDaysOff;
+  pendingDaysOff=null;
+  save(); closeModal('daysOffModal'); render(); toast('Week schedule updated');
+}
+
+/* Settings */
+function uploadAvatar(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{ state.avatar=ev.target.result; save(); render(); openSettingsPrefill(); toast('Photo updated'); };
+  r.readAsDataURL(f);
+}
+function removeAvatar(){ state.avatar=''; save(); render(); openSettingsPrefill(); toast('Photo removed'); }
+function uploadBg(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{ state.bgImage=ev.target.result; state.bgColor=''; applyBackground(); save(); toast('Background updated'); };
+  r.readAsDataURL(f);
+}
+function applyBgColor(){
+  state.bgColor=document.getElementById('bgColorPick').value; state.bgImage='';
+  applyBackground(); save(); toast('Background updated');
+}
+function removeBg(){ state.bgImage=''; state.bgColor=''; applyBackground(); save(); toast('Background reset'); }
+function applyBackground(){
+  if(state.bgImage){ document.body.style.backgroundImage=`linear-gradient(rgba(255,255,255,0.55),rgba(255,255,255,0.55)),url(${state.bgImage})`; document.body.style.backgroundSize='cover'; document.body.style.backgroundAttachment='fixed'; }
+  else if(state.bgColor){ document.body.style.backgroundImage='none'; document.body.style.background=state.bgColor; }
+  else { document.body.style.backgroundImage='none'; document.body.style.background=''; }
+}
+
+function applyLogoColor(){
+  state.logoColor=document.getElementById('logoColorPick').value;
+  applyLogoColorToDom(); save(); toast('Logo color updated');
+}
+function resetLogoColor(){ state.logoColor=''; applyLogoColorToDom(); save(); toast('Logo reset to theme color'); }
+function applyLogoColorToDom(){
+  document.querySelectorAll('.sidebar .brand .orb').forEach(el=>{ el.style.background = state.logoColor || 'var(--accent)'; });
+}
+
+function pickTheme(t){
+  state.theme=t; document.body.setAttribute('data-theme',t);
+  document.querySelectorAll('#themeChips .chip').forEach(b=>b.classList.toggle('active', b.dataset.themeOpt===t));
+}
+function openSettingsPrefillAndOpen(){ openSettingsPrefill(); openModal('settingsModal'); }
+function openSettingsPrefill(){
+  document.getElementById('setName').value=state.name;
+  document.getElementById('setGoal').value=state.goal;
+  document.getElementById('setStart').value=state.startDate;
+  document.getElementById('setEnd').value=state.endDate;
+  document.getElementById('setSchedMode').value=state.schedMode;
+  document.getElementById('setDayCap').value=state.dayCap;
+  const av=document.getElementById('avatarPreview')||document.getElementById('avatarPreviewWrap');
+  if(av){ av.textContent = state.avatar? '' : (state.name? state.name[0].toUpperCase():'?'); av.style.backgroundImage = state.avatar? `url(${state.avatar})`:''; av.style.backgroundSize='cover'; av.style.backgroundPosition='center'; }
+  if(state.bgColor) document.getElementById('bgColorPick').value=state.bgColor;
+  if(state.logoColor) document.getElementById('logoColorPick').value=state.logoColor;
+  const themes=['lilac','sunset','ocean','berry','forest'];
+  document.getElementById('themeChips').innerHTML = themes.map(t=>
+    `<button type="button" class="chip ${state.theme===t?'active':''}" data-theme-opt="${t}" onclick="pickTheme('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</button>`
+  ).join('');
+}
+function saveSettings(){
+  state.name=document.getElementById('setName').value.trim();
+  state.goal=document.getElementById('setGoal').value.trim();
+  state.startDate=document.getElementById('setStart').value || state.startDate;
+  state.endDate=document.getElementById('setEnd').value;
+  state.schedMode=document.getElementById('setSchedMode').value;
+  state.dayCap=+document.getElementById('setDayCap').value||3;
+  save(); closeModal('settingsModal'); render(); toast('Saved');
+}
+function resetAll(){
+  if(!confirm('This will erase all your data. Continue?')) return;
+  state=defaultState(); obStep=1; obGoalChoice=''; save(); closeModal('settingsModal'); render();
+}
+
+/* Export / Import */
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='orbit-planner-backup.json'; a.click();
+  toast('Exported');
+}
+function importData(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      state=Object.assign(defaultState(),data);
+      save(); closeModal('settingsModal'); render(); toast('Imported');
+    }catch(err){ toast('Invalid file'); }
+  };
+  reader.readAsText(file);
+}
+
+/* Init */
+document.body.setAttribute('data-theme', state.theme||'lilac');
+document.body.setAttribute('data-dark', state.dark? '1':'0');
+function toggleDark(){
+  state.dark=!state.dark; document.body.setAttribute('data-dark', state.dark?'1':'0');
+  document.getElementById('darkToggle').textContent = state.dark? '☀':'🌙';
+  save();
+}
+document.getElementById('darkToggle').textContent = state.dark? '☀':'🌙';
+applyBackground();
+applyLogoColorToDom();
+render();
+</script>
+</body>
+</html>
